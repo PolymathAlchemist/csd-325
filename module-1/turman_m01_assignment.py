@@ -136,6 +136,7 @@ def bottle_countdown(bottles_count: int) -> None:
 
     return
 
+
 def plurality(
         bottles_count: int,
         singular_form: str,
