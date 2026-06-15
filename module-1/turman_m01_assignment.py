@@ -104,6 +104,11 @@ def bottle_countdown(bottles_count: int) -> None:
     """
     bottle_count: int = bottles_count
 
+    print("")
+    print(
+        f"♩♬♪♫" * 11
+    )
+
     while bottle_count >= 1:
         current_bottle_word: str = plurality(
             bottle_count,
@@ -129,8 +134,7 @@ def bottle_countdown(bottles_count: int) -> None:
             f"{bottle_count} {remaining_bottle_word} of beer on the wall.\n"
         )
 
-    print(REMINDER_MESSAGE)
-
+    return
 
 def plurality(
         bottles_count: int,
@@ -179,6 +183,8 @@ def main() -> None:
         MAXIMUM_BOTTLES
     )
     bottle_countdown(bottles_count)
+
+    print(REMINDER_MESSAGE)
 
 
 if __name__ == "__main__":
