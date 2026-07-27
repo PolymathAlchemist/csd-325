@@ -1,4 +1,5 @@
-def main():
+def main() -> None:
+    """Run the project demonstration."""
     print("Hello from csd-325!")
 
 

@@ -1,0 +1,234 @@
+"""
+CSD325-T301 Advanced Python
+Instructor: Professor Parks
+Assignment: Module 6.2 - forest_fire_sim_group_d.py
+Authors:
+    Jared Morris
+    Jack Summers
+    Eric J. Turman
+    Dejah Van Assche
+    Jacob Young
+
+Date: 2026-07-19
+Emails:
+    Jared Morris
+    Jack Summers
+    ejturman@my365.bellevue.edu
+    dvanassche@my365.Bellevue.edu
+    Jacob Young
+
+Changes:
+    Added a centered lake.
+    Added permanent water cells.
+    Prevented tree growth and fire spread in water.
+    Added blue water display.
+    Refactored the simulation update into update_forest().
+    Corrected the initial tree-density probability calculation.
+
+
+Original attribution:
+Forest Fire Sim, modified by Sue Sampson, based on a program by Al Sweigart
+A simulation of wildfires spreading in a forest. Press Ctrl-C to stop.
+Inspired by Nicky Case's Emoji Sim http://ncase.me/simulating/model/
+** use spaces, not indentation to modify **
+Tags: short, bext, simulation
+"""
+
+# ============================================================================
+# Imports
+# ============================================================================
+
+import random
+import sys
+import time
+
+try:
+    import bext
+except ImportError:
+    print('This program requires the bext module, which you')
+    print('can install by following the instructions at')
+    print('https://pypi.org/project/Bext/')
+    sys.exit()
+
+
+# ============================================================================
+# Constants
+# ============================================================================
+
+WIDTH = 79
+HEIGHT = 22
+
+TREE = 'A'
+FIRE = '@'
+EMPTY = ' '
+WATER = '~'
+
+LAKE_WIDTH = 7
+LAKE_HEIGHT = 5
+
+# (!) Try changing these settings to anything between 0.0 and 1.0:
+INITIAL_TREE_DENSITY = 0.20  # Amount of forest that starts with trees.
+GROW_CHANCE = 0.01  # Chance a blank space turns into a tree.
+FIRE_CHANCE = 0.01  # Chance a tree is hit by lightning & burns.
+
+# (!) Try setting the pause length to 1.0 or 0.0:
+PAUSE_LENGTH = 0.5
+
+
+# ============================================================================
+# Functions
+# ============================================================================
+
+def main() -> None:
+    """
+    Run the forest fire simulation.
+
+    Returns
+    -------
+    None
+        The simulation runs until interrupted by CTRL+C.
+    """
+    forest = create_new_forest()
+    bext.clear()
+
+    while True:  # Main program loop.
+        display_forest(forest)
+        forest = update_forest(forest)
+        time.sleep(PAUSE_LENGTH)
+
+
+def create_new_forest() -> dict:
+    """
+    Create a new forest data structure.
+
+    Returns
+    -------
+    dict
+        A dictionary containing forest dimensions and cell contents.
+    """
+    forest = {'width': WIDTH, 'height': HEIGHT}
+    for x in range(WIDTH):
+        for y in range(HEIGHT):
+            if random.random() <= INITIAL_TREE_DENSITY:
+                forest[(x, y)] = TREE  # Start as a tree.
+            else:
+                forest[(x, y)] = EMPTY  # Start as an empty space.
+
+    forest_center_x = WIDTH // 2
+    forest_center_y = HEIGHT // 2
+
+    # Place a permanent lake in the center of the forest.
+    lake_left = forest_center_x - LAKE_WIDTH // 2
+    lake_right = forest_center_x + LAKE_WIDTH // 2 + 1
+    lake_top = forest_center_y - LAKE_HEIGHT // 2
+    lake_bottom = forest_center_y + LAKE_HEIGHT // 2 + 1
+
+    for x in range(lake_left, lake_right):
+        for y in range(lake_top, lake_bottom):
+            forest[(x, y)] = WATER  # Create a lake in the center.
+
+    return forest
+
+
+def update_forest(forest: dict) -> dict:
+    """
+    Create the next forest state for one simulation step.
+
+    Parameters
+    ----------
+    forest : dict
+        Dictionary containing forest dimensions and cell contents.
+
+    Returns
+    -------
+    dict
+        A new dictionary containing the updated forest state.
+    """
+    next_forest = {
+        'width': forest['width'],
+        'height': forest['height'],
+    }
+
+    for x in range(forest['width']):
+        for y in range(forest['height']):
+            if (x, y) in next_forest:
+                # If this cell was already set by fire spread, leave it alone.
+                continue
+
+            if forest[(x, y)] == WATER:
+                next_forest[(x, y)] = WATER
+            elif (
+                (forest[(x, y)] == EMPTY)
+                and (random.random() <= GROW_CHANCE)
+            ):
+                # Grow a tree in this empty space.
+                next_forest[(x, y)] = TREE
+            elif (
+                (forest[(x, y)] == TREE)
+                and (random.random() <= FIRE_CHANCE)
+            ):
+                # Lightning sets this tree on fire.
+                next_forest[(x, y)] = FIRE
+            elif forest[(x, y)] == FIRE:
+                # This tree is currently burning.
+                # Loop through all the neighboring spaces:
+                for ix in range(-1, 2):
+                    for iy in range(-1, 2):
+                        # Fire spreads to neighboring trees, but not water.
+                        if forest.get((x + ix, y + iy)) == TREE:
+                            next_forest[(x + ix, y + iy)] = FIRE
+                # The tree has burned down now, so erase it:
+                next_forest[(x, y)] = EMPTY
+            else:
+                # Just copy the existing object:
+                next_forest[(x, y)] = forest[(x, y)]
+
+    return next_forest
+
+
+def display_forest(forest: dict) -> None:
+    """
+    Display the forest data structure on the screen.
+
+    Parameters
+    ----------
+    forest : dict
+        Dictionary containing forest dimensions and cell contents.
+
+    Returns
+    -------
+    None
+        The display is written directly to the terminal.
+    """
+    bext.goto(0, 0)
+    for y in range(forest['height']):
+        for x in range(forest['width']):
+            if forest[(x, y)] == TREE:
+                bext.fg('green')
+                print(TREE, end='')
+            elif forest[(x, y)] == FIRE:
+                bext.fg('red')
+                print(FIRE, end='')
+            elif forest[(x, y)] == WATER:
+                bext.fg('blue')
+                print(WATER, end='')
+            elif forest[(x, y)] == EMPTY:
+                print(EMPTY, end='')
+
+        print()
+    bext.fg('reset')  # Use the default font color.
+    print('Grow chance: {}%  '.format(GROW_CHANCE * 100), end='')
+    print('Lightning chance: {}%  '.format(FIRE_CHANCE * 100), end='')
+    print('Press Ctrl-C to quit.')
+
+
+# ============================================================================
+# Program Entry Point
+# ============================================================================
+
+# If this program was run (instead of imported), run the game:
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit()  # When Ctrl-C is pressed, end the program.
